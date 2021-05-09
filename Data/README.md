@@ -1,1 +1,1 @@
-## This code is for outputting datasets from web scraping
+## This folder is for outputting datasets from web scraping
