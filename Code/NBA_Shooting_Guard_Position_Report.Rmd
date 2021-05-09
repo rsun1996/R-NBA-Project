@@ -1,0 +1,453 @@
+---
+title: "NBA Shooting Guard Position Report"
+author: "Renhao (Peter) Sun"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+# Introduction
+
+This report outlines the delevpment of Shooting Guard (SG) position in the league for the past fourty years and using the method of position-Based Descriptive Statistical Analysis for NBA Maximum Salary Contract to analyze if a GM of an NBA team should give Demar Derozan a max contract next year. 
+
+# Development of SG Position
+
+The figure one breaks down the average points per game for all the player on each position from 1984 to 2020. The average points per game for SG is 10.05, which is the most out of all five positions. In addition, SG is the only position that average double digits per game among all five positions.
+
+```{r figure_1, warning=FALSE, echo=FALSE,comment=NA,message=FALSE}
+### Step One: Setting up direction and loading all packages 
+mydir = "C:/Users/peter/Documents/UTSA/R/Project"
+codedir = paste(mydir,"/Code",sep = "")
+input =  paste(mydir,"/Data",sep = "")
+output <- paste(mydir,"/Output/Data",sep = "")
+source(paste(codedir,"/Package.R",sep = ""))
+library(tidyverse)
+library(plotly)
+
+### Datasets
+NBA_Stats_Merge <- read.csv(paste(output,"/NBA_Stats_Merge.csv",sep = ""))
+c <- NBA_Stats_Merge[which(NBA_Stats_Merge$Position == "C" | NBA_Stats_Merge$Position == "C,PF"),]
+pf <- NBA_Stats_Merge[which(NBA_Stats_Merge$Position == "PF" | NBA_Stats_Merge$Position == "PF,SF" | NBA_Stats_Merge$Position == "PF,SG"),]
+sf <- NBA_Stats_Merge[which(NBA_Stats_Merge$Position == "SF" | NBA_Stats_Merge$Position == "SF,SG"),]
+pg  <- NBA_Stats_Merge[which(NBA_Stats_Merge$Position == "PG" | NBA_Stats_Merge$Position == "PG,SF" | NBA_Stats_Merge$Position == "PG,SG"),]
+sg <- NBA_Stats_Merge[which(NBA_Stats_Merge$Position == "SG"),]
+
+### PTS figure
+parameter <- c("C" = "#0c2340","PF" = "#F15A22","SF" = "#B52532","SG" = "#051C2D","PG" = "#EE756C")
+position <- c("C","PF","SF","SG","PG")
+pts <- c(round(mean(c$PTS),2),round(mean(pf$PTS),2),round(mean(sf$PTS),2),round(mean(sg$PTS),2),round(mean(pg$PTS),2))
+ast <- c(round(mean(c$AST),2),round(mean(pf$AST),2),round(mean(sf$AST),2),round(mean(sg$AST),2),round(mean(pg$AST),2))
+TRB <- c(round(mean(c$TRB),2),round(mean(pf$TRB),2),round(mean(sf$TRB),2),round(mean(sg$TRB),2),round(mean(pg$TRB),2))
+position_stats <- data.frame(position,pts,ast,TRB)
+colnames(position_stats) <- c("Position","PTS","AST","TRB")
+pl_1 <- ggplot()+
+      theme_bw()+
+      geom_bar(data = position_stats,aes(x = Position,y = PTS,fill =  Position),stat = "identity",width = 1)+
+      coord_polar()+
+      ggtitle("Figure 1. Points per Game based on Position",
+              subtitle = "1984 - 2021")+
+      scale_fill_manual("legend", values = parameter,breaks = c("C","PF","SF","SG","PG"))+
+      theme(legend.position = 'bottom',
+              legend.direction = "horizontal",
+              plot.title = element_text(size = 12,face = "bold",hjust = 0.5,family = "Arial",colour = "#051C2D"),
+              plot.subtitle = element_text(size = 10,hjust = 0.5,family = "Arial",colour = "#051C2D"),
+              legend.title = element_blank(),
+              legend.background = element_blank(),
+              legend.box.background = element_rect(colour = "#051C2D"),
+              legend.key = element_rect(colour = "transparent", fill = "white"),
+              legend.text = element_text(family = "Arial",colour = "#051C2D",size = 12),
+              panel.background = element_rect(fill = "transparent",color = NA),
+              plot.background = element_rect(fill = "transparent",colour = NA),
+              axis.text.x = element_text(family = "Arial",colour = "#051C2D",size = 12),
+              axis.text.y = element_text(family = "Arial",colour = "#051C2D",size = 12),
+              axis.title.x = element_text(family = "Arial",colour = "#051C2D",size = 12,face = "bold"),
+              axis.title.y = element_text(family = "Arial",colour = "#051C2D",size = 12,face = "bold"),
+              panel.border = element_blank())
+pl_1
+```
+
+Even though the main responsibility of a SG has always been scoring, the skill sets required for SG has changed dramatically due to change of offensive strategies such as using a small lineup and shooting more threes to space the floor. Figure two belows demonstrates the change of scoring method for SGs in the league. SGs shot way more two-pointer than threes from 1985 to the middle of 90s. For instance, SGs’ avaerga three-point attemp is only 0.68, which is much less than two-point attemp with 10.41 attemps per game. However, the number of three-point attemp have been increasing since 1994. In year of 2020, the number of three-point attemp is 3.96, which is very close to 4.41 two-point attemps.
+
+```{r figure_2, warning=FALSE, echo=FALSE,comment=NA,message=FALSE}
+parameter_2 <- c("Three-Point Attempts" = "#051C2D","Two-Point Attempts" = "#B52532")
+sg_three_two <- aggregate(list(sg$Three_point_field_goals_attempt_per_game,sg$Two_point_field_goals_attempt_per_game),by = list(sg$Season),mean)
+colnames(sg_three_two) <- c("Season","Three_Point_Attempt","Two_Point_Attempt")
+sg_three_two$year <- c(1985:2020)
+pl_2 <- ggplot()+
+      theme_bw()+
+      geom_line(data = sg_three_two,mapping =  aes(x = year,y = Three_Point_Attempt,color = "Three-Point Attempts"),size = 1.2)+
+      geom_line(data = sg_three_two,mapping = aes(x = year,y = Two_Point_Attempt,color = "Two-Point Attempts"),size = 1.2)+
+      ggtitle("Figure 2. Average Field Goals Attempt per Game for SG",
+              subtitle = "1984 - 2020")+
+      scale_color_manual("legend",values = parameter_2,breaks = c("Three-Point Attempts","Two-Point Attempts"))+
+      theme(legend.position = 'bottom',
+            legend.direction = "horizontal",
+            plot.title = element_text(size = 12,face = "bold",hjust = 0.5,family = "Arial",colour = "#051C2D"),
+            plot.subtitle = element_text(size = 10,hjust = 0.5,family = "Arial",colour = "#051C2D"),
+            legend.title = element_blank(),
+            legend.background = element_blank(),
+            legend.box.background = element_rect(colour = "#051C2D"),
+            legend.key = element_rect(colour = "transparent", fill = "white"),
+            legend.text = element_text(family = "Arial",colour = "#051C2D",size = 12),
+            panel.background = element_rect(fill = "transparent",color = NA),
+            plot.background = element_rect(fill = "transparent",colour = NA),
+            axis.text.x = element_text(family = "Arial",colour = "#051C2D",size = 12),
+            axis.text.y = element_text(family = "Arial",colour = "#051C2D",size = 12),
+            axis.title.x = element_text(family = "Arial",colour = "#051C2D",size = 12,face = "bold"),
+            axis.title.y = element_text(family = "Arial",colour = "#051C2D",size = 12,face = "bold"),
+            panel.border = element_blank())+
+    scale_x_continuous(name = "Season",breaks = c(1985,1990,1995,2000,2005,2010,2015,2020))+
+    scale_y_continuous(name = "Field Goals Attempt",breaks = c(0,2,4,6,8,10,12,14))
+
+fig <- ggplotly(pl_2)
+fig <-
+  fig %>% layout(boxmode = "group",
+                 legend = list(orientation = "h",
+                               xanchor = "center",
+                               x = 0.5,
+                               y = -0.2,
+                               traceorder = "reversed"
+                 ))
+fig
+
+```
+
+Figure 3 breaks down Michael Jordan’s total scores by Free Throw (FT), two points and three points. 
+
+```{r figure_3, warning=FALSE, echo=FALSE,comment=NA,message=FALSE}
+mj <- read.csv(paste(output,"/Stats_MJ.csv",sep = ""))
+colnames(mj) <- c("Type","Points")
+kobe <- read.csv(paste(output,"/Stats_Kobe.csv",sep = ""))
+colnames(kobe) <- c("Type","Points")
+colors <- c("#B52532","#051C2D","#EE756C")
+fig_3 <- plot_ly(data = mj,labels = ~Type,values = ~Points,type = "pie",
+                textposition = 'inside',
+                textinfo = 'label+percent',
+                insidetextfont = list(color = '#FFFFFF',family = "Arial"),
+                hoverinfo = 'text',
+                marker = list(colors = colors,line = list(color = '#FFFFFF', width = 1)),
+                #title = "Figure 3. MJ's Total Points by FT/Three/Two",
+                showlegend = FALSE)
+
+fig_3 <- fig_3 %>%
+  layout(title = "Figure 3. MJ's Total Points by FT/Three/Two",
+         font=list(family = "Arial",size = 12, color = "#051C2D"))
+fig_3
+```
+
+Figure 4 breaks down Kobe Bryant’s total scores by Free Throw (FT), two points and three points. 
+
+```{r figure_4, warning=FALSE, echo=FALSE,comment=NA,message=FALSE}
+kobe <- read.csv(paste(output,"/Stats_Kobe.csv",sep = ""))
+colnames(kobe) <- c("Type","Points")
+colors <- c("#B52532","#051C2D","#EE756C")
+fig_4 <- plot_ly(data = kobe,labels = ~Type,values = ~Points,type = "pie",
+                textposition = 'inside',
+                textinfo = 'label+percent',
+                insidetextfont = list(color = '#FFFFFF',family = "Arial"),
+                hoverinfo = 'text',
+                marker = list(colors = colors,line = list(color = '#FFFFFF', width = 1)),
+                showlegend = FALSE)
+
+fig_4 <- fig_4 %>%
+  layout(title = "Figure 4. Kobe's Total Points by FT/Three/Two",
+         font=list(family = "Arial",size = 12, color = "#051C2D"))
+fig_4
+```
+
+Figure 5 breaks down James Harden’s total scores by Free Throw (FT), two points and three points. 
+
+```{r figure_5, warning=FALSE, echo=FALSE,comment=NA,message=FALSE}
+harden <- read.csv(paste(output,"/Stats_Harden.csv",sep = ""))
+colnames(harden) <- c("Type","Points")
+colors <- c("#B52532","#051C2D","#EE756C")
+fig_5 <- plot_ly(data = harden,labels = ~Type,values = ~Points,type = "pie",
+                textposition = 'inside',
+                textinfo = 'label+percent',
+                insidetextfont = list(color = '#FFFFFF',family = "Arial"),
+                hoverinfo = 'text',
+                marker = list(colors = colors,line = list(color = '#FFFFFF', width = 1)),
+                showlegend = FALSE)
+
+fig_5 <- fig_5 %>%
+  layout(title = "Figure 5. Harden's Total Points by FT/Three/Two",
+         font=list(family = "Arial",size = 12, color = "#051C2D"))
+fig_5
+```
+
+Three figures above shows us that the top SGs in the league also follows the general trend. In Jordan's era, middle range jumping shot is his primary method of scoring especially after coming back from the first retirment. As Jordan's disciple, Kobe is also a master of middle range game. However, we can still notice that 16.8% of Kobe's total scores are coming from three poitns, which are way more than Jordan's 5.32%. In morden era, James Harden is currently the best SG in the league. As you can see from the figure 5, three pointer becomes one of his main method for scoring, which represents 33.7% of his total scores. He also has more FTs than both Kobe and Jordan's in terms of the percentage of total scoring, which shows another difference between modern SGs' playstyle and traditional SGs'. Nowadays people expect SGs to socre more efficient by going to the paint area instead of middle range jumping shot. 
+
+# Demar Derozan's Contract 
+
+Demar Derozan is currently playing for Spurs as their SG and this year is his last year of his current contract. Spurs can offer him a max salary starting at 35% of the cap. Based on previous analysis, it is fair enough to use PTS per game, three-point field goals, and number of FTs as three seasonal basic per-game performance metrics to measure a production level of a SG.
+
+```{r figure_6, warning=FALSE, echo=FALSE,comment=NA,message=FALSE}
+sg$Salary <- as.numeric(gsub('[$,]', '',sg$Salary))
+sg_2017 <- sg[which(sg$Start>=2017),]
+sg_2017$Salary <- as.numeric(gsub('[$,]', '',sg_2017$Salary))
+sg_2017 <- sg_2017[-which(is.na(sg_2017$Salary)),]
+for (i.player in 1:nrow(sg_2017)){
+      if(sg_2017$Start[i.player] < 2019){
+        sg_2017[i.player,"Salary_Adjusted"] = sg_2017$Salary[i.player]*1.05^(2019-sg_2017$Start[i.player])
+      }else{
+        sg_2017[i.player,"Salary_Adjusted"] = sg_2017$Salary[i.player]
+      }
+}
+pl_6 =  ggplot()+
+        theme_bw()+
+        geom_point(data = sg_2017, mapping = aes(x = Salary_Adjusted, y = sg_2017$PTS),color = "#051C2D",size = 3)+
+        ggtitle("Figure 6. Scatter Plots of PTS/Three Points/FTs and Salary",
+                subtitle = "All SGs in NBA from 2017 to 2021")+
+        xlab("Salary ($)") +
+        ylab("PTS")+
+        theme(legend.position = 'bottom',
+              legend.direction = "horizontal",
+              plot.title = element_text(size = 12,face = "bold",hjust = 0.5,family = "Arial",colour = "#051C2D"),
+              plot.subtitle = element_text(size = 10,hjust = 0.5,family = "Arial",colour = "#051C2D"),
+              legend.title = element_blank(),
+              legend.background = element_blank(),
+              legend.box.background = element_rect(colour = "#051C2D"),
+              legend.key = element_rect(colour = "transparent", fill = "white"),
+              legend.text = element_text(family = "Arial",colour = "#051C2D",size = 12),
+              panel.background = element_rect(fill = "transparent",color = NA),
+              plot.background = element_rect(fill = "transparent",colour = NA),
+              axis.text.x = element_text(family = "Arial",colour = "#051C2D",size = 12),
+              axis.text.y = element_text(family = "Arial",colour = "#051C2D",size = 12),
+              axis.title.x = element_text(family = "Arial",colour = "#051C2D",size = 12,face = "bold"),
+              axis.title.y = element_text(family = "Arial",colour = "#051C2D",size = 12,face = "bold"),
+              panel.border = element_blank())+
+      scale_y_continuous(breaks = c(0,5,10,15,20,25,30),limits = c(0,30))
+
+fig_1 <- ggplotly(pl_6)
+fig_1 <-
+  fig_1 %>% layout(boxmode = "group",
+                 legend = list(orientation = "h",
+                               xanchor = "center",
+                               x = 0.5,
+                               y = -0.2,
+                               traceorder = "reversed"
+                 ))
+
+
+pl_7 =  ggplot()+
+        theme_bw()+
+        geom_point(data = sg_2017, mapping = aes(x = Salary_Adjusted, y = sg_2017$Three_point_field_goals_per_game),color = "#051C2D",size = 3)+
+        ggtitle("Figure 6. Scatter Plots of PTS/Three Points/FTs and Salary",
+                subtitle = "All SGs in NBA from 2017 to 2021")+
+        xlab("Salary ($)") +
+        ylab("PTS")+
+        theme(legend.position = 'bottom',
+              legend.direction = "horizontal",
+              plot.title = element_text(size = 12,face = "bold",hjust = 0.5,family = "Arial",colour = "#051C2D"),
+              plot.subtitle = element_text(size = 10,hjust = 0.5,family = "Arial",colour = "#051C2D"),
+              legend.title = element_blank(),
+              legend.background = element_blank(),
+              legend.box.background = element_rect(colour = "#051C2D"),
+              legend.key = element_rect(colour = "transparent", fill = "white"),
+              legend.text = element_text(family = "Arial",colour = "#051C2D",size = 12),
+              panel.background = element_rect(fill = "transparent",color = NA),
+              plot.background = element_rect(fill = "transparent",colour = NA),
+              axis.text.x = element_text(family = "Arial",colour = "#051C2D",size = 12),
+              axis.text.y = element_text(family = "Arial",colour = "#051C2D",size = 12),
+              axis.title.x = element_text(family = "Arial",colour = "#051C2D",size = 12,face = "bold"),
+              axis.title.y = element_text(family = "Arial",colour = "#051C2D",size = 12,face = "bold"),
+              panel.border = element_blank())#+
+      #scale_y_continuous(breaks = c(0,0.4,0.8,1.2,1.6,2.0),limits = c(0,2))
+fig_2 <- ggplotly(pl_7)
+fig_2 <-
+  fig_2 %>% layout(boxmode = "group",
+                 legend = list(orientation = "h",
+                               xanchor = "center",
+                               x = 0.5,
+                               y = -0.2,
+                               traceorder = "reversed"
+                 ))
+
+pl_8 =  ggplot()+
+        theme_bw()+
+        geom_point(data = sg_2017, mapping = aes(x = Salary_Adjusted, y = sg_2017$FT),color = "#051C2D",size = 3)+
+        ggtitle("Figure 6. Scatter Plots of PTS/Three Points/FTs and Salary",
+                subtitle = "All SGs in NBA from 2017 to 2021")+
+        xlab("Salary ($)") +
+        ylab("PTS")+
+        theme(legend.position = 'bottom',
+              legend.direction = "horizontal",
+              plot.title = element_text(size = 12,face = "bold",hjust = 0.5,family = "Arial",colour = "#051C2D"),
+              plot.subtitle = element_text(size = 10,hjust = 0.5,family = "Arial",colour = "#051C2D"),
+              legend.title = element_blank(),
+              legend.background = element_blank(),
+              legend.box.background = element_rect(colour = "#051C2D"),
+              legend.key = element_rect(colour = "transparent", fill = "white"),
+              legend.text = element_text(family = "Arial",colour = "#051C2D",size = 12),
+              panel.background = element_rect(fill = "transparent",color = NA),
+              plot.background = element_rect(fill = "transparent",colour = NA),
+              axis.text.x = element_text(family = "Arial",colour = "#051C2D",size = 12),
+              axis.text.y = element_text(family = "Arial",colour = "#051C2D",size = 12),
+              axis.title.x = element_text(family = "Arial",colour = "#051C2D",size = 12,face = "bold"),
+              axis.title.y = element_text(family = "Arial",colour = "#051C2D",size = 12,face = "bold"),
+              panel.border = element_blank())#+
+      #scale_y_continuous(breaks = c(0,0.4,0.8,1.2,1.6,2.0),limits = c(0,2))
+fig_3 <- ggplotly(pl_8)
+fig_3 <-
+  fig_3 %>% layout(boxmode = "group",
+                 legend = list(orientation = "h",
+                               xanchor = "center",
+                               x = 0.5,
+                               y = -0.2,
+                               traceorder = "reversed"
+                 ))
+
+
+
+subplot(fig_1,fig_2,fig_3,nrows = 1,margin = 0.05)
+```
+
+For the three seasonal advanced stats, Player Efficience Rating (PER),  Win Shares (WS), and Offensive Box Plus/Minus (OBPM) should be the ideal performance metrics for measuring SGs' efficiency level.
+
+```{r figure_7, warning=FALSE, echo=FALSE,comment=NA,message=FALSE}
+pl_9 =  ggplot()+
+        theme_bw()+
+        geom_point(data = sg_2017, mapping = aes(x = Salary_Adjusted, y = sg_2017$PER),color = "#051C2D",size = 3)+
+        ggtitle("Figure 7. Scatter Plots of PER/WS/OBPM",
+                subtitle = "All SGs in NBA from 2017 to 2021")+
+        xlab("Salary ($)") +
+        ylab("PTS")+
+        theme(legend.position = 'bottom',
+              legend.direction = "horizontal",
+              plot.title = element_text(size = 12,face = "bold",hjust = 0.5,family = "Arial",colour = "#051C2D"),
+              plot.subtitle = element_text(size = 10,hjust = 0.5,family = "Arial",colour = "#051C2D"),
+              legend.title = element_blank(),
+              legend.background = element_blank(),
+              legend.box.background = element_rect(colour = "#051C2D"),
+              legend.key = element_rect(colour = "transparent", fill = "white"),
+              legend.text = element_text(family = "Arial",colour = "#051C2D",size = 12),
+              panel.background = element_rect(fill = "transparent",color = NA),
+              plot.background = element_rect(fill = "transparent",colour = NA),
+              axis.text.x = element_text(family = "Arial",colour = "#051C2D",size = 12),
+              axis.text.y = element_text(family = "Arial",colour = "#051C2D",size = 12),
+              axis.title.x = element_text(family = "Arial",colour = "#051C2D",size = 12,face = "bold"),
+              axis.title.y = element_text(family = "Arial",colour = "#051C2D",size = 12,face = "bold"),
+              panel.border = element_blank())+
+      scale_y_continuous(breaks = c(0,5,10,15,20,25,30),limits = c(0,30))
+
+fig_1 <- ggplotly(pl_6)
+fig_1 <-
+  fig_1 %>% layout(boxmode = "group",
+                 legend = list(orientation = "h",
+                               xanchor = "center",
+                               x = 0.5,
+                               y = -0.2,
+                               traceorder = "reversed"
+                 ))
+
+
+pl_7 =  ggplot()+
+        theme_bw()+
+        geom_point(data = sg_2017, mapping = aes(x = Salary_Adjusted, y = sg_2017$win_shares),color = "#051C2D",size = 3)+
+        ggtitle("Figure 7. Scatter Plots of PER/WS/OBPM",
+                subtitle = "All SGs in NBA from 2017 to 2021")+
+        xlab("Salary ($)") +
+        ylab("PTS")+
+        theme(legend.position = 'bottom',
+              legend.direction = "horizontal",
+              plot.title = element_text(size = 12,face = "bold",hjust = 0.5,family = "Arial",colour = "#051C2D"),
+              plot.subtitle = element_text(size = 10,hjust = 0.5,family = "Arial",colour = "#051C2D"),
+              legend.title = element_blank(),
+              legend.background = element_blank(),
+              legend.box.background = element_rect(colour = "#051C2D"),
+              legend.key = element_rect(colour = "transparent", fill = "white"),
+              legend.text = element_text(family = "Arial",colour = "#051C2D",size = 12),
+              panel.background = element_rect(fill = "transparent",color = NA),
+              plot.background = element_rect(fill = "transparent",colour = NA),
+              axis.text.x = element_text(family = "Arial",colour = "#051C2D",size = 12),
+              axis.text.y = element_text(family = "Arial",colour = "#051C2D",size = 12),
+              axis.title.x = element_text(family = "Arial",colour = "#051C2D",size = 12,face = "bold"),
+              axis.title.y = element_text(family = "Arial",colour = "#051C2D",size = 12,face = "bold"),
+              panel.border = element_blank())#+
+      #scale_y_continuous(breaks = c(0,0.4,0.8,1.2,1.6,2.0),limits = c(0,2))
+fig_2 <- ggplotly(pl_7)
+fig_2 <-
+  fig_2 %>% layout(boxmode = "group",
+                 legend = list(orientation = "h",
+                               xanchor = "center",
+                               x = 0.5,
+                               y = -0.2,
+                               traceorder = "reversed"
+                 ))
+
+pl_8 =  ggplot()+
+        theme_bw()+
+        geom_point(data = sg_2017, mapping = aes(x = Salary_Adjusted, y = sg_2017$Offensive_box_plus_minus),color = "#051C2D",size = 3)+
+        ggtitle("Figure 7. Scatter Plots of PER/WS/OBPM",
+                subtitle = "All SGs in NBA from 2017 to 2021")+
+        xlab("Salary ($)") +
+        ylab("PTS")+
+        theme(legend.position = 'bottom',
+              legend.direction = "horizontal",
+              plot.title = element_text(size = 12,face = "bold",hjust = 0.5,family = "Arial",colour = "#051C2D"),
+              plot.subtitle = element_text(size = 10,hjust = 0.5,family = "Arial",colour = "#051C2D"),
+              legend.title = element_blank(),
+              legend.background = element_blank(),
+              legend.box.background = element_rect(colour = "#051C2D"),
+              legend.key = element_rect(colour = "transparent", fill = "white"),
+              legend.text = element_text(family = "Arial",colour = "#051C2D",size = 12),
+              panel.background = element_rect(fill = "transparent",color = NA),
+              plot.background = element_rect(fill = "transparent",colour = NA),
+              axis.text.x = element_text(family = "Arial",colour = "#051C2D",size = 12),
+              axis.text.y = element_text(family = "Arial",colour = "#051C2D",size = 12),
+              axis.title.x = element_text(family = "Arial",colour = "#051C2D",size = 12,face = "bold"),
+              axis.title.y = element_text(family = "Arial",colour = "#051C2D",size = 12,face = "bold"),
+              panel.border = element_blank())#+
+      #scale_y_continuous(breaks = c(0,0.4,0.8,1.2,1.6,2.0),limits = c(0,2))
+fig_3 <- ggplotly(pl_8)
+fig_3 <-
+  fig_3 %>% layout(boxmode = "group",
+                 legend = list(orientation = "h",
+                               xanchor = "center",
+                               x = 0.5,
+                               y = -0.2,
+                               traceorder = "reversed"
+                 ))
+
+
+
+subplot(fig_1,fig_2,fig_3,nrows = 1,margin = 0.05)
+```
+
+```{r table, warning=FALSE, echo=FALSE,comment=NA,message=FALSE}
+Salary_Cap <- read.csv(paste(output,"/Salary_Cap.csv",sep = ""))
+colnames(Salary_Cap) <- c("Year","Soft_Cap")
+Salary_Cap$Soft_Cap <- as.numeric(gsub('[$,]', '',Salary_Cap$Soft_Cap))
+Salary_Cap$Year <- as.factor(Salary_Cap$Year)
+Salary_Cap <- Salary_Cap %>%
+      separate(Year,c("Start","End"),"-")
+    
+for(i.row in 1:nrow(sg_2017)){
+    sg_2017$Salary_Cap[i.row] <- Salary_Cap[which(Salary_Cap$Start == sg_2017$Start[i.row]),"Soft_Cap"] 
+    }
+sg_2017$Cap_Space <- sg_2017$Salary/sg_2017$Salary_Cap
+benchmark_sg <- sg[which(sg_2017$Cap_Space >= 0.25),]
+#mean(benchmark_sg$PTS)
+#mean(benchmark_sg$Three_point_field_goals_per_game)
+#mean(benchmark_sg$FT)
+#mean(benchmark_sg$PER)
+#mean(benchmark_sg$win_shares)
+#mean(benchmark_sg$Offensive_box_plus_minus)
+
+
+#kable(iris[1:5, ], format = "html")
+
+
+```
+
